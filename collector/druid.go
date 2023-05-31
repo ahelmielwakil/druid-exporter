@@ -291,6 +291,7 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 		dataSourceTotalRowsMap = make(map[string]DataSourcesTotalRows)
 		taskStatusMetricMap = make(map[string]TaskStatusMetric)
 		workersMap = make(map[string][]worker)
+		lastRefresh = now
 	}
 
 	ch <- prometheus.MustNewConstMetric(collector.DruidHealthStatus,
