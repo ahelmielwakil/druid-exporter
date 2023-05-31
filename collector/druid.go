@@ -261,6 +261,7 @@ func getSupervisorStatus(supervisor string) int64 {
 	kingpin.Parse()
 	druidURL := *druid + "/druid/indexer/v1/supervisor/" + supervisor + "/status"
 	responseData, err := utils.GetResponse(druidURL, "")
+	logrus.Errorf(string(responseData))
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
 		return -1
@@ -272,7 +273,7 @@ func getSupervisorStatus(supervisor string) int64 {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
 		return -1
 	}
-	return supervisorStatus.payload.aggregateLag
+	return supervisorStatus.Payload.AggregateLag
 }
 
 // Describe will associate the value for druid exporter

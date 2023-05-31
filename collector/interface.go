@@ -104,8 +104,8 @@ type worker struct {
 }
 
 type status struct {
-	payload struct {
-		aggregateLag int64 `json:"aggregateLag"`
+	Payload struct {
+		AggregateLag int64 `json:"aggregateLag"`
 	}
 }
 
