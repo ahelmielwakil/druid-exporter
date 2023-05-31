@@ -280,7 +280,8 @@ func Collector() *MetricCollector {
 
 // Collect will collect all the metrics
 func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
-	if counter%2 == 0 {
+	if counter%4 == 0 {
+		logrus.Errorf("refreshing maps")
 		f = make(map[string]float64)
 		segementInterfaceMap = make(map[string]SegementInterface)
 		interfacesMap = make(map[string][]map[string]interface{})
@@ -288,8 +289,8 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 		dataSourceTotalRowsMap = make(map[string]DataSourcesTotalRows)
 		taskStatusMetricMap = make(map[string]TaskStatusMetric)
 		workersMap = make(map[string][]worker)
-		counter++
 	}
+	counter++
 	ch <- prometheus.MustNewConstMetric(collector.DruidHealthStatus,
 		prometheus.CounterValue, GetDruidHealthMetrics())
 	for _, data := range GetDruidSegmentData() {
