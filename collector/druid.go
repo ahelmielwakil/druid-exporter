@@ -261,7 +261,6 @@ func getSupervisorStatus(supervisor string) int64 {
 	kingpin.Parse()
 	druidURL := *druid + "/druid/indexer/v1/supervisor/" + supervisor + "/status"
 	responseData, err := utils.GetResponse(druidURL, "")
-	logrus.Errorf(string(responseData))
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
 		return -1
@@ -355,7 +354,7 @@ func Collector() *MetricCollector {
 		),
 		DruidSupervisorLag: prometheus.NewDesc("druid_supervisor_lag",
 			"Druid Supervisor Lag",
-			[]string{"datasource_name"}, nil,
+			[]string{"datasource_name", "state"}, nil,
 		),
 	}
 }
@@ -436,7 +435,7 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 			fmt.Sprintf("%v", data["healthy"]), fmt.Sprintf("%v", data["detailedState"]))
 
 		ch <- prometheus.MustNewConstMetric(collector.DruidSupervisorLag,
-			prometheus.GaugeValue, float64(getSupervisorStatus(fmt.Sprintf("%v", data["id"]))), fmt.Sprintf("%v", data["id"]))
+			prometheus.GaugeValue, float64(getSupervisorStatus(fmt.Sprintf("%v", data["id"]))), fmt.Sprintf("%v", data["id"]), fmt.Sprintf("%v", data["detailedState"]))
 	}
 
 	for _, data := range GetDruidDataSourcesTotalRows(sqlURL) {
