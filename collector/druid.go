@@ -19,6 +19,8 @@ var (
 	).Default("http://druid.opstreelabs.in").OverrideDefaultFromEnvar("DRUID_URL").Short('d').String()
 )
 
+var counter int = 0
+
 // GetDruidHealthMetrics returns the set of metrics for druid
 var f map[string]float64 = make(map[string]float64)
 
@@ -278,6 +280,16 @@ func Collector() *MetricCollector {
 
 // Collect will collect all the metrics
 func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
+	if counter%2 == 0 {
+		f = make(map[string]float64)
+		segementInterfaceMap = make(map[string]SegementInterface)
+		interfacesMap = make(map[string][]map[string]interface{})
+		tasksInterfaceMap = make(map[string]TasksInterface)
+		dataSourceTotalRowsMap = make(map[string]DataSourcesTotalRows)
+		taskStatusMetricMap = make(map[string]TaskStatusMetric)
+		workersMap = make(map[string][]worker)
+		counter++
+	}
 	ch <- prometheus.MustNewConstMetric(collector.DruidHealthStatus,
 		prometheus.CounterValue, GetDruidHealthMetrics())
 	for _, data := range GetDruidSegmentData() {
