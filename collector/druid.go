@@ -20,15 +20,29 @@ var (
 )
 
 // GetDruidHealthMetrics returns the set of metrics for druid
+var f map[string]float64 = make(map[string]float64)
+
 func GetDruidHealthMetrics() float64 {
+	val, ok := f["0"]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidHealthURL := *druid + healthURL
 	logrus.Debugf("Successfully collected the data for druid healthcheck")
-	return utils.GetHealth(druidHealthURL)
+	var h float64 = utils.GetHealth(druidHealthURL)
+	f["0"] = h
+	return h
 }
 
 // GetDruidSegmentData returns the datasources of druid
+var segementInterfaceMap map[string]SegementInterface = make(map[string]SegementInterface)
+
 func GetDruidSegmentData() SegementInterface {
+	val, ok := segementInterfaceMap["0"]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidSegmentURL := *druid + segmentDataURL
 	responseData, err := utils.GetResponse(druidSegmentURL, "Segment")
@@ -44,11 +58,18 @@ func GetDruidSegmentData() SegementInterface {
 		return nil
 	}
 	logrus.Debugf("Druid segment's metric data, %v", metric)
+	segementInterfaceMap["0"] = metric
 	return metric
 }
 
 // GetDruidData return all the tasks and its state
+var interfacesMap map[string][]map[string]interface{} = make(map[string][]map[string]interface{})
+
 func GetDruidData(pathURL string) []map[string]interface{} {
+	val, ok := interfacesMap[pathURL]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
@@ -64,11 +85,18 @@ func GetDruidData(pathURL string) []map[string]interface{} {
 		return nil
 	}
 	logrus.Debugf("Druid supervisor's metric data, %v", metric)
+	interfacesMap[pathURL] = metric
 	return metric
 }
 
 // GetDruidTasksData return all the tasks and its state
+var tasksInterfaceMap map[string]TasksInterface = make(map[string]TasksInterface)
+
 func GetDruidTasksData(pathURL string) TasksInterface {
+	val, ok := tasksInterfaceMap[pathURL]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
@@ -84,11 +112,18 @@ func GetDruidTasksData(pathURL string) TasksInterface {
 		return nil
 	}
 	logrus.Debugf("Druid tasks's metric data, %v", metric)
+	tasksInterfaceMap[pathURL] = metric
 	return metric
 }
 
 // GetDruidDataSourcesTotalRows returns the amount of rows in each datasource
+var dataSourceTotalRowsMap map[string]DataSourcesTotalRows = make(map[string]DataSourcesTotalRows)
+
 func GetDruidDataSourcesTotalRows(pathURL string) DataSourcesTotalRows {
+	val, ok := dataSourceTotalRowsMap[pathURL]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetSQLResponse(druidURL, totalRowsSQL)
@@ -104,11 +139,18 @@ func GetDruidDataSourcesTotalRows(pathURL string) DataSourcesTotalRows {
 		return nil
 	}
 	logrus.Debugf("Druid datasources total rows, %v", datasources)
+	dataSourceTotalRowsMap[pathURL] = datasources
 	return datasources
 }
 
 // GetDruidTasksStatusCount returns count of different tasks by status
+var taskStatusMetricMap map[string]TaskStatusMetric = make(map[string]TaskStatusMetric)
+
 func GetDruidTasksStatusCount(pathURL string) TaskStatusMetric {
+	val, ok := taskStatusMetricMap[pathURL]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
@@ -124,11 +166,18 @@ func GetDruidTasksStatusCount(pathURL string) TaskStatusMetric {
 		return nil
 	}
 	logrus.Debugf("Successfully collected tasks status count: %v", pathURL)
+	taskStatusMetricMap[pathURL] = taskCount
 	return taskCount
 }
 
 // getDruidWorkersData return all the workers and its state
+var workersMap map[string][]worker = make(map[string][]worker)
+
 func getDruidWorkersData(pathURL string) []worker {
+	val, ok := workersMap[pathURL]
+	if ok {
+		return val
+	}
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
@@ -144,7 +193,7 @@ func getDruidWorkersData(pathURL string) []worker {
 		return nil
 	}
 	logrus.Debugf("Druid workers's metric data, %v", workers)
-
+	workersMap[pathURL] = workers
 	return workers
 }
 
