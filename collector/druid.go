@@ -4,6 +4,7 @@ import (
 	"druid-exporter/utils"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"time"
 
 	// "math/rand"
@@ -333,27 +334,27 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(collector.DruidTaskCapacity, prometheus.GaugeValue, float64(taskCapacity))
 
-	// for _, data := range GetDruidTasksData(tasksURL) {
-	// 	hostname := ""
-	// 	for _, worker := range workers {
-	// 		for _, task := range worker.RunningTasks {
-	// 			if task == data.ID {
-	// 				hostname = worker.hostname()
-	// 				break
-	// 			}
-	// 		}
-	// 		if hostname != "" {
-	// 			break
-	// 		}
-	// 	}
-	// 	if hostname == "" {
-	// 		if len(workers) != 0 {
-	// 			hostname = workers[rand.Intn(len(workers))].hostname()
-	// 		}
-	// 	}
-	// 	ch <- prometheus.MustNewConstMetric(collector.DruidTasks,
-	// 		prometheus.GaugeValue, data.Duration, hostname, data.DataSource, data.ID, data.GroupID, data.Status, data.CreatedTime)
-	// }
+	for _, data := range GetDruidTasksData(tasksURL) {
+		hostname := ""
+		for _, worker := range workers {
+			for _, task := range worker.RunningTasks {
+				if task == data.ID {
+					hostname = worker.hostname()
+					break
+				}
+			}
+			if hostname != "" {
+				break
+			}
+		}
+		if hostname == "" {
+			if len(workers) != 0 {
+				hostname = workers[rand.Intn(len(workers))].hostname()
+			}
+		}
+		ch <- prometheus.MustNewConstMetric(collector.DruidTasks,
+			prometheus.GaugeValue, data.Duration, hostname, data.DataSource, data.ID, data.GroupID, data.Status, data.CreatedTime)
+	}
 
 	for _, data := range GetDruidData(supervisorURL) {
 		ch <- prometheus.MustNewConstMetric(collector.DruidSupervisors,
