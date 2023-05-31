@@ -42,6 +42,7 @@ type MetricCollector struct {
 	DruidCompletedTasks       *prometheus.Desc
 	DruidPendingTasks         *prometheus.Desc
 	DruidTaskCapacity         *prometheus.Desc
+	DruidSupervisorLag        *prometheus.Desc
 }
 
 // DataSourcesTotalRows shows total rows from each datasource
@@ -100,6 +101,12 @@ type worker struct {
 	}
 	CurrCapacityUsed int      `json:"currCapacityUsed"`
 	RunningTasks     []string `json:"runningTasks"`
+}
+
+type status struct {
+	payload struct {
+		aggregateLag int64 `json:"aggregateLag"`
+	}
 }
 
 func (w worker) hostname() string {

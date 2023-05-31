@@ -257,6 +257,24 @@ func refreshDruidWorkersData(pathURL string) {
 	workersMap.Store(pathURL, workers)
 }
 
+func getSupervisorStatus(supervisor string) int64 {
+	kingpin.Parse()
+	druidURL := *druid + "/druid/indexer/v1/supervisor/" + supervisor + "/status"
+	responseData, err := utils.GetResponse(druidURL, "")
+	if err != nil {
+		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
+		return -1
+	}
+	logrus.Debugf("Successfully retrieved the data for druid's supervisor status")
+	var supervisorStatus status
+	err = json.Unmarshal(responseData, &supervisorStatus)
+	if err != nil {
+		logrus.Errorf("Cannot parse JSON data: %v", err)
+		return -1
+	}
+	return supervisorStatus.payload.aggregateLag
+}
+
 // Describe will associate the value for druid exporter
 func (collector *MetricCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.DruidHealthStatus
@@ -271,6 +289,7 @@ func (collector *MetricCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.DruidWaitingTasks
 	ch <- collector.DruidCompletedTasks
 	ch <- collector.DruidPendingTasks
+	ch <- collector.DruidSupervisorLag
 }
 
 // Collector return the defined metrics
@@ -332,6 +351,10 @@ func Collector() *MetricCollector {
 		DruidTaskCapacity: prometheus.NewDesc("druid_task_capacity",
 			"Druid task capacity",
 			nil, nil,
+		),
+		DruidSupervisorLag: prometheus.NewDesc("druid_supervisor_lag",
+			"Druid Supervisor Lag",
+			[]string{"datasource_name"}, nil,
 		),
 	}
 }
@@ -410,6 +433,9 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(collector.DruidSupervisors,
 			prometheus.GaugeValue, float64(1), fmt.Sprintf("%v", data["id"]),
 			fmt.Sprintf("%v", data["healthy"]), fmt.Sprintf("%v", data["detailedState"]))
+
+		ch <- prometheus.MustNewConstMetric(collector.DruidSupervisorLag,
+			prometheus.GaugeValue, float64(getSupervisorStatus(fmt.Sprintf("%v", data["id"]))), fmt.Sprintf("%v", data["id"]))
 	}
 
 	for _, data := range GetDruidDataSourcesTotalRows(sqlURL) {
