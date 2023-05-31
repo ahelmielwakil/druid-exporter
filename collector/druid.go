@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	// "math/rand"
@@ -22,183 +23,238 @@ var (
 )
 
 var lastRefresh int64 = 0
+var refresh bool = false
 
 // GetDruidHealthMetrics returns the set of metrics for druid
-var f map[string]float64 = make(map[string]float64)
+var healtMetricsMap sync.Map
 
 func GetDruidHealthMetrics() float64 {
-	val, ok := f["0"]
-	if ok {
-		return val
+	_, ok := healtMetricsMap.Load(0)
+	if !ok {
+		refreshDruidHealthMetrics()
+	} else if refresh {
+		go refreshDruidHealthMetrics()
 	}
+	val, _ := healtMetricsMap.Load(0)
+	return val.(float64)
+}
+
+func refreshDruidHealthMetrics() {
 	kingpin.Parse()
 	druidHealthURL := *druid + healthURL
 	logrus.Debugf("Successfully collected the data for druid healthcheck")
 	var h float64 = utils.GetHealth(druidHealthURL)
-	f["0"] = h
-	return h
+	healtMetricsMap.Store(0, h)
 }
 
 // GetDruidSegmentData returns the datasources of druid
-var segementInterfaceMap map[string]SegementInterface = make(map[string]SegementInterface)
+var segementInterfaceMap sync.Map
 
 func GetDruidSegmentData() SegementInterface {
-	val, ok := segementInterfaceMap["0"]
-	if ok {
-		return val
+	_, ok := segementInterfaceMap.Load(0)
+	if !ok {
+		refreshDruidSegmentData()
+	} else if refresh {
+		go refreshDruidSegmentData()
 	}
+	val, _ := segementInterfaceMap.Load(0)
+	return val.(SegementInterface)
+}
+
+func refreshDruidSegmentData() {
 	kingpin.Parse()
 	druidSegmentURL := *druid + segmentDataURL
 	responseData, err := utils.GetResponse(druidSegmentURL, "Segment")
 	if err != nil {
 		logrus.Errorf("Cannot collect data for druid segments: %v", err)
-		return nil
+		segementInterfaceMap.Store(0, nil)
+		return
 	}
 	logrus.Debugf("Successfully collected the data for druid segment")
 	var metric SegementInterface
 	err = json.Unmarshal(responseData, &metric)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		segementInterfaceMap.Store(0, nil)
+		return
 	}
 	logrus.Debugf("Druid segment's metric data, %v", metric)
-	segementInterfaceMap["0"] = metric
-	return metric
+	segementInterfaceMap.Store(0, metric)
 }
 
 // GetDruidData return all the tasks and its state
-var interfacesMap map[string][]map[string]interface{} = make(map[string][]map[string]interface{})
+var interfacesMap sync.Map
 
 func GetDruidData(pathURL string) []map[string]interface{} {
-	val, ok := interfacesMap[pathURL]
-	if ok {
-		return val
+	_, ok := interfacesMap.Load(pathURL)
+	if !ok {
+		refreshDruidData(pathURL)
+	} else if refresh {
+		go refreshDruidData(pathURL)
 	}
+	val, _ := interfacesMap.Load(pathURL)
+	return val.([]map[string]interface{})
+}
+
+func refreshDruidData(pathURL string) {
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
 	if err != nil {
 		logrus.Errorf("Cannot collect data for druid's supervisors: %v", err)
-		return nil
+		interfacesMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully collected the data for druid's supervisors")
 	var metric []map[string]interface{}
 	err = json.Unmarshal(responseData, &metric)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		interfacesMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Druid supervisor's metric data, %v", metric)
-	interfacesMap[pathURL] = metric
-	return metric
+	interfacesMap.Store(pathURL, metric)
 }
 
 // GetDruidTasksData return all the tasks and its state
-var tasksInterfaceMap map[string]TasksInterface = make(map[string]TasksInterface)
+var tasksInterfaceMap sync.Map
 
 func GetDruidTasksData(pathURL string) TasksInterface {
-	val, ok := tasksInterfaceMap[pathURL]
-	if ok {
-		return val
+	_, ok := tasksInterfaceMap.Load(pathURL)
+	if !ok {
+		refreshDruidTasksData(pathURL)
+	} else if refresh {
+		go refreshDruidTasksData(pathURL)
 	}
+	val, _ := tasksInterfaceMap.Load(pathURL)
+	return val.(TasksInterface)
+}
+
+func refreshDruidTasksData(pathURL string) {
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's tasks: %v", err)
-		return nil
+		tasksInterfaceMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully retrieved the data for druid's tasks")
 	var metric TasksInterface
 	err = json.Unmarshal(responseData, &metric)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		tasksInterfaceMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Druid tasks's metric data, %v", metric)
-	tasksInterfaceMap[pathURL] = metric
-	return metric
+	tasksInterfaceMap.Store(pathURL, metric)
 }
 
 // GetDruidDataSourcesTotalRows returns the amount of rows in each datasource
-var dataSourceTotalRowsMap map[string]DataSourcesTotalRows = make(map[string]DataSourcesTotalRows)
+var dataSourceTotalRowsMap sync.Map
 
 func GetDruidDataSourcesTotalRows(pathURL string) DataSourcesTotalRows {
-	val, ok := dataSourceTotalRowsMap[pathURL]
-	if ok {
-		return val
+	_, ok := dataSourceTotalRowsMap.Load(pathURL)
+	if !ok {
+		refreshDruidDataSourcesTotalRows(pathURL)
+	} else if refresh {
+		go refreshDruidDataSourcesTotalRows(pathURL)
 	}
+	val, _ := dataSourceTotalRowsMap.Load(pathURL)
+	return val.(DataSourcesTotalRows)
+}
+
+func refreshDruidDataSourcesTotalRows(pathURL string) {
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetSQLResponse(druidURL, totalRowsSQL)
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's datasources rows: %v", err)
-		return nil
+		dataSourceTotalRowsMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully retrieved the data for druid's datasources rows")
 	var datasources DataSourcesTotalRows
 	err = json.Unmarshal(responseData, &datasources)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		dataSourceTotalRowsMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Druid datasources total rows, %v", datasources)
-	dataSourceTotalRowsMap[pathURL] = datasources
-	return datasources
+	dataSourceTotalRowsMap.Store(pathURL, datasources)
 }
 
 // GetDruidTasksStatusCount returns count of different tasks by status
-var taskStatusMetricMap map[string]TaskStatusMetric = make(map[string]TaskStatusMetric)
+var taskStatusMetricMap sync.Map
 
 func GetDruidTasksStatusCount(pathURL string) TaskStatusMetric {
-	val, ok := taskStatusMetricMap[pathURL]
-	if ok {
-		return val
+	_, ok := taskStatusMetricMap.Load(pathURL)
+	if !ok {
+		refreshDruidTasksStatusCount(pathURL)
+	} else if refresh {
+		go refreshDruidTasksStatusCount(pathURL)
 	}
+	val, _ := taskStatusMetricMap.Load(pathURL)
+	return val.(TaskStatusMetric)
+}
+
+func refreshDruidTasksStatusCount(pathURL string) {
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
-		return nil
+		taskStatusMetricMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully retrieved the data for druid task: %v", pathURL)
 	var taskCount TaskStatusMetric
 	err = json.Unmarshal(responseData, &taskCount)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		taskStatusMetricMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully collected tasks status count: %v", pathURL)
-	taskStatusMetricMap[pathURL] = taskCount
-	return taskCount
+	taskStatusMetricMap.Store(pathURL, taskCount)
 }
 
 // getDruidWorkersData return all the workers and its state
-var workersMap map[string][]worker = make(map[string][]worker)
+var workersMap sync.Map
 
 func getDruidWorkersData(pathURL string) []worker {
-	val, ok := workersMap[pathURL]
-	if ok {
-		return val
+	_, ok := workersMap.Load(pathURL)
+	if !ok {
+		refreshDruidWorkersData(pathURL)
+	} else if refresh {
+		go refreshDruidWorkersData(pathURL)
 	}
+	val, _ := workersMap.Load(pathURL)
+	return val.([]worker)
+}
+
+func refreshDruidWorkersData(pathURL string) {
 	kingpin.Parse()
 	druidURL := *druid + pathURL
 	responseData, err := utils.GetResponse(druidURL, pathURL)
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
-		return nil
+		workersMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Successfully retrieved the data for druid's workers")
 	var workers []worker
 	err = json.Unmarshal(responseData, &workers)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return nil
+		workersMap.Store(pathURL, nil)
+		return
 	}
 	logrus.Debugf("Druid workers's metric data, %v", workers)
-	workersMap[pathURL] = workers
-	return workers
+	workersMap.Store(pathURL, workers)
 }
 
 // Describe will associate the value for druid exporter
@@ -283,15 +339,9 @@ func Collector() *MetricCollector {
 // Collect will collect all the metrics
 func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 	var now int64 = time.Now().Unix()
-	if (now - lastRefresh) > 300 {
+	if (now - lastRefresh) > 120 {
 		logrus.Info("refreshing cache")
-		f = make(map[string]float64)
-		segementInterfaceMap = make(map[string]SegementInterface)
-		interfacesMap = make(map[string][]map[string]interface{})
-		tasksInterfaceMap = make(map[string]TasksInterface)
-		dataSourceTotalRowsMap = make(map[string]DataSourcesTotalRows)
-		taskStatusMetricMap = make(map[string]TaskStatusMetric)
-		workersMap = make(map[string][]worker)
+		refresh = true
 		lastRefresh = now
 	}
 
@@ -365,4 +415,6 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, data := range GetDruidDataSourcesTotalRows(sqlURL) {
 		ch <- prometheus.MustNewConstMetric(collector.DruidDataSourcesTotalRows, prometheus.GaugeValue, float64(data.TotalRows), data.Datasource, data.Source)
 	}
+
+	refresh = false
 }
