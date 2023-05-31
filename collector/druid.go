@@ -4,7 +4,8 @@ import (
 	"druid-exporter/utils"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+
+	// "math/rand"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
