@@ -257,22 +257,36 @@ func refreshDruidWorkersData(pathURL string) {
 	workersMap.Store(pathURL, workers)
 }
 
+// getSupervisorStatus return the supervisor lag
+var supervisorsLagMap sync.Map
+
 func getSupervisorStatus(supervisor string) int64 {
+	_, ok := supervisorsLagMap.Load(supervisor)
+	if !ok {
+		refreshSupervisorStatus(supervisor)
+	} else if refresh {
+		go refreshSupervisorStatus(supervisor)
+	}
+	val, _ := supervisorsLagMap.Load(supervisor)
+	return val.(int64)
+}
+
+func refreshSupervisorStatus(supervisor string) {
 	kingpin.Parse()
 	druidURL := *druid + "/druid/indexer/v1/supervisor/" + supervisor + "/status"
 	responseData, err := utils.GetResponse(druidURL, "")
 	if err != nil {
 		logrus.Errorf("Cannot retrieve data for druid's workers: %v", err)
-		return -1
+		supervisorsLagMap.Store(supervisor, -1)
 	}
 	logrus.Debugf("Successfully retrieved the data for druid's supervisor status")
 	var supervisorStatus status
 	err = json.Unmarshal(responseData, &supervisorStatus)
 	if err != nil {
 		logrus.Errorf("Cannot parse JSON data: %v", err)
-		return -1
+		supervisorsLagMap.Store(supervisor, -1)
 	}
-	return supervisorStatus.Payload.AggregateLag
+	supervisorsLagMap.Store(supervisor, supervisorStatus.Payload.AggregateLag)
 }
 
 // Describe will associate the value for druid exporter
