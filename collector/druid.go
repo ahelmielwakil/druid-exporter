@@ -321,7 +321,7 @@ func Collector() *MetricCollector {
 		),
 		DruidWorkers: prometheus.NewDesc("druid_workers_capacity_used",
 			"Druid workers capacity used",
-			[]string{"pod", "version", "ip"}, nil,
+			[]string{"pod", "version", "ip", "capacity"}, nil,
 		),
 		DruidTasks: prometheus.NewDesc("druid_tasks_duration",
 			"Druid tasks duration and state",
@@ -416,7 +416,8 @@ func (collector *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, worker := range workers {
 		taskCapacity += worker.Worker.Capacity
 		ch <- prometheus.MustNewConstMetric(collector.DruidWorkers,
-			prometheus.GaugeValue, float64(worker.CurrCapacityUsed), worker.hostname(), worker.Worker.Version, worker.Worker.IP)
+			prometheus.GaugeValue, float64(worker.CurrCapacityUsed),
+			worker.hostname(), worker.Worker.Version, worker.Worker.IP, fmt.Sprintf("%v", worker.Worker.Capacity))
 	}
 
 	ch <- prometheus.MustNewConstMetric(collector.DruidTaskCapacity, prometheus.GaugeValue, float64(taskCapacity))
